@@ -1,0 +1,4 @@
+[{:arachne.module/name :org.arachne-framework/arachne-pedestal
+  :arachne.module/schema arachne.pedestal/schema
+  :arachne.module/configure arachne.pedestal/configure
+  :arachne.module/dependencies [:org.arachne-framework/arachne-http]}]

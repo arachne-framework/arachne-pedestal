@@ -1,0 +1,7 @@
+project.clj
+.idea
+*.iml
+.nrepl-*
+target
+.git-deps
+.lein*

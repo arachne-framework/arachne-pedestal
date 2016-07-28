@@ -1,0 +1,17 @@
+machine:
+  environment:
+    BOOT_JVM_OPTIONS: "-Xmx3g"
+  java:
+    version: oraclejdk8
+dependencies:
+  cache_directories:
+    - ~/.boot
+    - ~/bin
+  pre:
+    - .ci/install-boot.sh
+    - .ci/install-buildtools.sh
+    - boot
+
+test:
+  override:
+    - .ci/run-tests.sh
