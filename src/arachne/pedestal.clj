@@ -1,9 +1,8 @@
 (ns arachne.pedestal
-  (:require [arachne.core.util :as util]
+  (:require [arachne.core.config :as cfg]
+            [arachne.pedestal.config :as ped-cfg]
+            [arachne.pedestal.server :as server]
             [arachne.pedestal.schema :as schema]))
-
-(defprotocol Handler
-  (handler [this] "Return a Ring-style request handler function"))
 
 (defn schema
   "Return the schema for the core module"
@@ -13,4 +12,6 @@
 (defn configure
   "Configure the core module"
   [cfg]
-  cfg  )
+  (-> cfg
+    (ped-cfg/add-default-interceptors)
+    (ped-cfg/add-server-constructors)))
