@@ -4,7 +4,7 @@
             [arachne.core.config :as cfg]))
 
 (deftest basic-interceptors
-  (let [cfg (core/build-config "test" '[:org.arachne-framework/arachne-pedestal]
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               '(do
                  (require '[arachne.core.dsl :as core])
                  (require '[arachne.http.dsl :as http])
