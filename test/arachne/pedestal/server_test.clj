@@ -26,7 +26,7 @@
               #(str/replace % "world" "Luke")))})
 
 (deftest ^:integration hello-world-server
-  (let [cfg (core/build-config "test" '[:org.arachne-framework/arachne-pedestal]
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
                   '(do
                      (require '[arachne.core.dsl :as core])
                      (require '[arachne.http.dsl :as http])
