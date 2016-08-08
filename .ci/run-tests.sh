@@ -4,7 +4,7 @@ set -e
 
 # Run tests
 echo "running tests..."
-boot test -j junit 2>&1
+boot test -a  -j junit 2>&1
 
 # Copy junit report
 if [ -z "$CIRCLE_TEST_REPORTS" ]; then
@@ -14,6 +14,9 @@ else
     mkdir -p $CIRCLE_TEST_REPORTS/clojure-test/
     cp -r target/junit/* $CIRCLE_TEST_REPORTS/clojure-test/
 fi
+
+# don't test previous commits for now - it's causing CI to timeout for some reason
+exit 0; 
 
 # Exit if not in PR context
 if [ -z "$CI_PULL_REQUESTS" ]; then
@@ -28,7 +31,7 @@ for sha in $( git rev-list origin/$MERGE_TARGET...HEAD | tail -n +2 ); do
     echo -e "\nTesting at $sha..."
     git show --summary $sha
     git checkout -q $sha
-    if boot test; then
+    if boot test -a; then
         echo -e "\nTests at $sha successful"
     else
         echo -e "\nTests on HEAD passed, however, tests failed on intermediate commit $sha."
