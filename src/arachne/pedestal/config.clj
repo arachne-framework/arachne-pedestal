@@ -10,12 +10,11 @@
 (defn add-server-constructors
   "Add the correct constructor to server entities"
   [cfg]
-  (let [txdata (map (fn [server-eid]
-                      {:db/id server-eid
-                       :arachne.component/constructor
-                       (keyword `server/constructor)})
-                 (http-cfg/servers cfg))]
-    (cfg/update cfg txdata)))
+  (reduce (fn [cfg server-eid]
+            (cfg/update cfg [{:db/id server-eid
+                              :arachne.component/constructor
+                              (keyword `server/constructor)}]))
+    cfg (http-cfg/servers cfg)))
 
 (def interceptor-rules
   "Datalog rules to find all interceptors attached to a route and any of its children"

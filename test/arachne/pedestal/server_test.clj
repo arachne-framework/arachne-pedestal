@@ -3,10 +3,10 @@
             [clojure.string :as str]
             [com.stuartsierra.component :as c]
             [arachne.core :as core]
+            [arachne.http :as http]
             [arachne.core.config :as cfg]
             [arachne.core.runtime :as rt]
             [ring.util.response :as ring-resp]
-            [io.pedestal.http.route.definition.table :as table]
             [clj-http.client :as client]))
 
 (defn hello-world
@@ -25,6 +25,10 @@
             (update-in ctx [:response :body]
               #(str/replace % "world" "Luke")))})
 
+(defrecord HandlerHandler []
+  http/Handler
+  (handle [_ _] (ring-resp/response "Hello from a handler!")))
+
 (deftest ^:integration hello-world-server
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
                   '(do
@@ -40,12 +44,17 @@
                      (core/component :test/b-handler {}
                        'arachne.pedestal.server-test/hello-world-handler)
 
+                     (core/component :test/handler-handler {}
+                       'arachne.pedestal.server-test/->HandlerHandler)
+
                      (core/component :test/a-interceptor {}
                        'arachne.pedestal.server-test/a-interceptor)
 
                      (http/server :test/server 8080
 
                        (http/endpoint :get "/" :test/hello-world-handler)
+
+                       (http/endpoint :get "/handler" :test/handler-handler)
 
                        (http/context "a"
 
@@ -62,6 +71,7 @@
 
     (let [rt (c/start rt)]
       (is (= "Hello, world!" (slurp "http://localhost:8080")))
+      (is (= "Hello from a handler!" (slurp "http://localhost:8080/handler")))
       (is (= "Hello, Luke!" (slurp "http://localhost:8080/a/b")))
       (let [result (try (client/get "http://localhost:8080/no-such-url")
                         (catch Exception e (ex-data e)))]

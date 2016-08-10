@@ -3,9 +3,11 @@
             [arachne.core.util :as util]
             [arachne.core.runtime :as rt]
             [arachne.http.config :as http-cfg]
+            [arachne.http :as http]
             [io.pedestal.interceptor :as interceptor]
             [io.pedestal.http.route :as r]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [io.pedestal.interceptor :as i]))
 
 (defn- endpoints
   "Return the EIDs of all endpoints that are children of a root route segment"
@@ -61,6 +63,16 @@
   (let [segments (drop 1 (route-segments cfg endpoint))]
     (concat (mapcat #(interceptors-for cfg %) segments) [endpoint])))
 
+(util/deferror ::cannot-coerce-to-interceptor "Could not convert component with class :class to an interceptor; it did not satisfy arachne.http/Handler or io.pedestal.interceptor/IntoInterceptor.")
+
+(defn interceptor
+  "Given a component instance, coerce it to a Pedestal interceptor"
+  [obj]
+  (cond
+    (satisfies? arachne.http/Handler obj) (i/interceptor #(http/handle obj %))
+    (satisfies? i/IntoInterceptor obj) (i/interceptor obj)
+    :else (util/error ::cannot-coerce-to-interceptor {:class (class obj)})))
+
 (defn- route
   "Return a seq of Pedestal route maps for the given endpoint EID"
   [router cfg eid]
@@ -70,7 +82,7 @@
      :path (route-path cfg eid)
      :interceptors (->> (interceptor-eids cfg eid)
                      (map #(rt/dependency-instance router cfg %))
-                     (map interceptor/interceptor))}))
+                     (map interceptor))}))
 
 (defn- server-router
   "Find server object associated with a given router"
