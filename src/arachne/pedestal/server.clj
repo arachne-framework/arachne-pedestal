@@ -24,7 +24,7 @@
    ::http/join? false
    ::http/interceptors (->> (routes/interceptors-for cfg eid)
                             (map #(rt/dependency-instance server cfg %))
-                            (map interceptor/interceptor))
+                            (map routes/interceptor))
    ::http/port (:arachne.http.server/port server)})
 
 (defrecord Server [cfg eid server]
@@ -33,8 +33,8 @@
     (assoc this :server (http/start
                           (http/create-server (service-map cfg eid this)))))
   (stop [this]
-    (http/stop server)
-    (dissoc this :server)))
+    (when server (http/stop server))
+    (assoc this :server nil)))
 
 (defn constructor
   "Component constructor for a Pedestal server"
