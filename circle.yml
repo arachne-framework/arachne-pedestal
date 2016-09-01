@@ -1,7 +1,6 @@
 machine:
   environment:
     BOOT_JVM_OPTIONS: "-Xmx3g"
-    ARACHNE_BUILDTOOLS_VERSION: 0.2.1
   java:
     version: oraclejdk8
 dependencies:
@@ -9,10 +8,16 @@ dependencies:
     - ~/.boot
     - ~/bin
   pre:
+    - sudo sysctl fs.inotify.max_user_watches=16384
     - .ci/install-boot.sh
-    - .ci/install-buildtools.sh
     - boot
 
 test:
   override:
     - .ci/run-tests.sh
+
+deployment:
+  dev:
+    branch: master
+    commands:
+    - boot deploy-dev
