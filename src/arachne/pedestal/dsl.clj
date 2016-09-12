@@ -3,14 +3,13 @@
             [arachne.http.dsl :as http-dsl]
             [arachne.core.config :as cfg]
             [arachne.core.util :as util]
-            [arachne.core.config.init :as script]
+            [arachne.core.config.init :as script :refer [defdsl]]
             [clojure.spec :as s]
             [clojure.string :as str]))
 
-(defn interceptor
+(defdsl interceptor
   "Define a Pedestal interceptor at the specified path."
   [& args]
-  (apply util/validate-args `interceptor args)
   (let [conformed (s/conform (:args (s/get-spec `interceptor)) args)
         path (http-dsl/with-context (or (:path conformed) ""))
         id (-> conformed :identity val)
