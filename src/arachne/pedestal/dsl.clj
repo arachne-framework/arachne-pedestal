@@ -7,6 +7,30 @@
             [clojure.spec :as s]
             [clojure.string :as str]))
 
+(defdsl create-server
+  "Define an Pedestal HTTP server entity with the given Arachne ID and port. Return
+  the tempid of the new server."
+  [arachne-id port]
+  (let [server-tid (cfg/tempid)
+        new-cfg (script/transact
+                  [{:db/id server-tid
+                    :arachne/id arachne-id
+                    :arachne/instance-of {:db/ident :arachne.pedestal/Server}
+                    :arachne.component/constructor :arachne.pedestal.server/constructor
+                    :arachne.http.server/port port}])]
+    (cfg/resolve-tempid new-cfg server-tid)))
+
+(defmacro server
+  "Define a Pedestal HTTP server in the current configuration. Evaluates the body with
+  the server bound as the context server. Returns the eid of the Server
+  component."
+  [arachne-id port & body]
+  (apply util/validate-args `server arachne-id port body)
+  `(let [server-eid# (create-server ~arachne-id ~port)]
+     (binding [http-dsl/*context-server* server-eid#]
+       ~@body)
+     server-eid#))
+
 (defdsl interceptor
   "Define a Pedestal interceptor at the specified path."
   [& args]

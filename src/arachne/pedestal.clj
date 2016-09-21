@@ -14,4 +14,4 @@
   [cfg]
   (-> cfg
     (ped-cfg/add-default-interceptors)
-    (ped-cfg/add-server-constructors)))
+    (ped-cfg/add-endpoint-types)))

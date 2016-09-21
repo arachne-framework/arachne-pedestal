@@ -16,7 +16,7 @@
                  (core/component :test/i2 {} 'test/ctor)
                  (core/component :test/i3 {} 'test/ctor)
 
-                 (http/server :test/server 8080
+                 (ped/server :test/server 8080
 
                    (ped/interceptor :test/i1)
 

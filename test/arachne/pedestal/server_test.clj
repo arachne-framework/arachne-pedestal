@@ -50,7 +50,7 @@
                      (core/component :test/a-interceptor {}
                        'arachne.pedestal.server-test/a-interceptor)
 
-                     (http/server :test/server 8080
+                     (ped/server :test/server 8080
 
                        (http/endpoint :get "/" :test/hello-world-handler)
 
@@ -79,3 +79,25 @@
         (is (= "Not Found" (:body result))))
       (c/stop rt))))
 
+
+(defn invalid-handler
+  []
+  (java.util.Date.))
+
+(deftest ^:integration endpoint-validity
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+                  '(do
+                     (require '[arachne.core.dsl :as core])
+                     (require '[arachne.http.dsl :as http])
+                     (require '[arachne.pedestal.dsl :as ped])
+
+                     (core/runtime :test/rt [:test/server])
+
+                     (core/component :test/invalid-handler {}
+                       'arachne.pedestal.server-test/invalid-handler)
+
+                     (ped/server :test/server 8080
+                       (http/endpoint :get "/" :test/invalid-handler))))
+        rt (rt/init cfg [:arachne/id :test/rt])]
+    (is (thrown-with-msg? Throwable #"Error in component"
+          (c/start rt)))))
