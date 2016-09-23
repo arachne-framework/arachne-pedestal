@@ -1,21 +1,12 @@
 (ns arachne.pedestal.config
   (:require [arachne.core.config :as cfg]
+            [arachne.core.config.ontology :as ont]
             [arachne.core.util :as util]
             [arachne.http.config :as http-cfg]
             [arachne.pedestal.server :as server]
             [arachne.pedestal.routes :as routes]
             [io.pedestal.http.route :as ped-route]
             [io.pedestal.interceptor :as i]))
-
-(defn add-server-constructors
-  "Add the correct constructor to server entities"
-  [cfg]
-  (cfg/with-provenance :module `add-server-constructors
-    (reduce (fn [cfg server-eid]
-              (cfg/update cfg [{:db/id server-eid
-                                :arachne.component/constructor
-                                (keyword `server/constructor)}]))
-      cfg (http-cfg/servers cfg))))
 
 (def interceptor-rules
   "Datalog rules to find all interceptors attached to a route and any of its children"
@@ -105,3 +96,22 @@
               (add-router-interceptor server-eid)))
     cfg
     (http-cfg/servers cfg)))
+
+(defn add-endpoint-types
+  "Finds all endpoints associated with a Pedestal server and asserts that they
+  are of the Pedestal endpoint class"
+  [cfg]
+  (let [endpoints (cfg/q cfg '[:find [?endpoint ...]
+                               :in $ %
+                               :where
+                               [?class :db/ident :arachne.pedestal/Server]
+                               (class ?class ?server)
+                               (endpoints ?server ?endpoint)]
+                    (concat ont/rules http-cfg/route-rules))]
+    (if (empty? endpoints)
+      cfg
+      (cfg/with-provenance :module `add-endpoint-types
+        (cfg/update cfg (for [e endpoints]
+                          {:db/id e
+                           :arachne/instance-of
+                           {:db/ident :arachne.pedestal/Endpoint}}))))))

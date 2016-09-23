@@ -9,3 +9,12 @@
           :identity (s/alt
                       :by-eid pos-int?
                       :by-arachne-id ::cspec/id)))
+
+(s/fdef arachne.pedestal.dsl/create-server
+  :args (s/cat :arachne-id ::cspec/id
+               :port integer?))
+
+(s/fdef arachne.pedestal.dsl/server
+  :args (s/cat :arachne-id ::cspec/id
+               :port integer?
+               :body (s/* any?)))
