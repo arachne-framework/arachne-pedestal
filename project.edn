@@ -2,10 +2,10 @@
  :version {:major 0, :minor 1, :patch 0, :qualifier :dev}
  :description "The Pedestal HTTP server module"
  :license {"Apache Software License 2.0" "http://www.apache.org/licenses/LICENSE-2.0"}
- :deps [[org.clojure/clojure "1.9.0-alpha12" :scope "provided"]
+ :deps [[org.clojure/clojure "1.9.0-alpha13" :scope "provided"]
         [io.pedestal/pedestal.service "0.5.0"]
         [io.pedestal/pedestal.jetty "0.5.0"]
-        [org.arachne-framework/arachne-http "0.1.0-master-0029-1374c9c"]
+        [org.arachne-framework/arachne-http "0.1.0-master-0031-e4707a0"]
         [adzerk/boot-test "1.1.2" :scope "test"]
         [org.clojure/test.check "0.9.0" :scope "test"]
         [org.clojure/tools.namespace "0.2.11" :scope "test"]
