@@ -22,9 +22,8 @@
   [cfg eid server]
   {::http/type :jetty
    ::http/join? false
-   ::http/interceptors (->> (routes/interceptors-for cfg eid)
-                            (map #(rt/dependency-instance server cfg %))
-                            (map routes/interceptor))
+   ::http/interceptors (map #(routes/interceptor cfg % (get server %))
+                              (routes/interceptors-for cfg eid))
    ::http/port (:arachne.http.server/port server)})
 
 (defrecord Server [cfg eid server]

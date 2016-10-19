@@ -3,6 +3,7 @@
             [arachne.http.dsl :as http-dsl]
             [arachne.core.config :as cfg]
             [arachne.core.util :as util]
+            [arachne.error :as e]
             [arachne.core.config.init :as script :refer [defdsl]]
             [clojure.spec :as s]
             [clojure.string :as str]))
@@ -25,7 +26,7 @@
   the server bound as the context server. Returns the eid of the Server
   component."
   [arachne-id port & body]
-  (apply util/validate-args `server arachne-id port body)
+  (apply e/assert-args `server arachne-id port body)
   `(let [server-eid# (create-server ~arachne-id ~port)]
      (binding [http-dsl/*context-server* server-eid#]
        ~@body)
