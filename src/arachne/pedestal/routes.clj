@@ -1,6 +1,7 @@
 (ns arachne.pedestal.routes
   (:require [arachne.core.config :as cfg]
             [arachne.core.util :as util]
+            [arachne.error :as e :refer [error deferror]]
             [arachne.core.runtime :as rt]
             [arachne.http.config :as http-cfg]
             [arachne.http :as http]
@@ -63,15 +64,24 @@
   (let [segments (drop 1 (route-segments cfg endpoint))]
     (concat (mapcat #(interceptors-for cfg %) segments) [endpoint])))
 
-(util/deferror ::cannot-coerce-to-interceptor "Could not convert component with class :class to an interceptor; it did not satisfy arachne.http/Handler or io.pedestal.interceptor/IntoInterceptor.")
+(deferror ::invalid-interceptor
+  :message "Component with class `:class` cannot be used as Interceptor."
+  :explanation "The config indicated that a component with entity ID `:eid` (Arachne ID: `:aid`) should be used as an Pedestal Interceptor. However, the component was of class `:class`, which the system does not know how to use as an interceptor."
+  :suggestions ["Ensure that the component instance satisfies either `arachne.http/Handler` or `io.pedestal.interceptor/IntoInterceptor`"]
+  :ex-data-docs {:eid "The component's entity ID"
+                 :aid "The component's Arachne ID"
+                 :class "The class of the component instance"})
 
 (defn interceptor
   "Given a component instance, coerce it to a Pedestal interceptor"
-  [obj]
+  [cfg component-eid component]
   (cond
-    (satisfies? arachne.http/Handler obj) (i/interceptor #(http/handle obj %))
-    (satisfies? i/IntoInterceptor obj) (i/interceptor obj)
-    :else (util/error ::cannot-coerce-to-interceptor {:class (class obj)})))
+    (satisfies? arachne.http/Handler component) (i/interceptor #(http/handle component %))
+    (satisfies? i/IntoInterceptor component) (i/interceptor component)
+    :else (error ::invalid-interceptor
+            {:eid component-eid
+             :aid (cfg/attr cfg component-eid :arachne/id)
+             :class (class component)})))
 
 (defn- route
   "Return a seq of Pedestal route maps for the given endpoint EID"
@@ -80,9 +90,8 @@
     {:route-name (cfg/attr cfg eid :arachne.http.endpoint/name)
      :method method
      :path (route-path cfg eid)
-     :interceptors (->> (interceptor-eids cfg eid)
-                     (map #(rt/dependency-instance router cfg %))
-                     (map interceptor))}))
+     :interceptors (map #(interceptor cfg % (get router %))
+                     (interceptor-eids cfg eid))}))
 
 (defn- server-router
   "Find server object associated with a given router"
