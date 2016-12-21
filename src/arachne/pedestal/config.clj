@@ -1,6 +1,6 @@
 (ns arachne.pedestal.config
   (:require [arachne.core.config :as cfg]
-            [arachne.core.config.ontology :as ont]
+            [arachne.core.config.model :as ont]
             [arachne.core.util :as util]
             [arachne.http.config :as http-cfg]
             [arachne.pedestal.server :as server]
@@ -105,7 +105,7 @@
                                :in $ %
                                :where
                                [?class :db/ident :arachne.pedestal/Server]
-                               (class ?class ?server)
+                               (type ?class ?server)
                                (endpoints ?server ?endpoint)]
                     (concat ont/rules http-cfg/route-rules))]
     (if (empty? endpoints)
