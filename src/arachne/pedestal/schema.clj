@@ -1,19 +1,19 @@
 (ns arachne.pedestal.schema
   (:require [arachne.core.config :refer [tempid]]
-            [arachne.core.config.ontology :as o]))
+            [arachne.core.config.model :as o]))
 
 (def schema
 
   (concat
 
-    (o/class :arachne.pedestal/Server [:arachne.http/Server]
+    (o/type :arachne.pedestal/Server [:arachne.http/Server]
       "A Pedestal HTTP server")
 
-    (o/class :arachne.pedestal/Endpoint [:arachne.http/Endpoint]
+    (o/type :arachne.pedestal/Endpoint [:arachne.http/Endpoint]
       "A Pedestal Endpoint"
       :arachne.pedestal.specs/endpoint)
 
-    (o/class :arachne.pedestal/Interceptor [:arachne/Component]
+    (o/type :arachne.pedestal/Interceptor [:arachne/Component]
       "A Pedestal interceptor as part of an Arachne HTTP routing structure. The runtime value must satisfy io.pedestal.interceptor/IntoInterceptor"
       :arachne.pedestal.specs/interceptor
       (o/attr :arachne.pedestal.interceptor/route :one :arachne.http/RouteSegment
