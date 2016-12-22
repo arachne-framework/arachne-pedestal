@@ -101,3 +101,34 @@
         rt (rt/init cfg [:arachne/id :test/rt])]
     (is (thrown-with-msg? Throwable #"Error in component"
           (c/start rt)))))
+
+
+(defn root-interceptor
+  []
+  {:leave (fn [ctx]
+            (assoc ctx :response {:status 200
+                                  :body "intercepted!"}))})
+
+(deftest ^:integration root-interceptors
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+                  '(do
+                     (require '[arachne.core.dsl :as core])
+                     (require '[arachne.http.dsl :as http])
+                     (require '[arachne.pedestal.dsl :as ped])
+
+                     (core/runtime :test/rt [:test/server])
+
+                     (core/component :test/hello-world-handler {}
+                       'arachne.pedestal.server-test/hello-world-handler)
+
+                     (core/component :test/root-interceptor
+                       'arachne.pedestal.server-test/root-interceptor)
+
+                     (ped/server :test/server 8080
+                       (ped/interceptor "/" :test/root-interceptor)
+                       (http/endpoint :get "/" :test/hello-world-handler))))
+        rt (rt/init cfg [:arachne/id :test/rt])]
+
+    (let [rt (c/start rt)]
+      (is (= "intercepted!" (slurp "http://localhost:8080")))
+      (c/stop rt))))

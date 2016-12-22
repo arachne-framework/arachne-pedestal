@@ -96,12 +96,7 @@
 (defn- server-router
   "Find server object associated with a given router"
   [cfg router-eid]
-  (cfg/q cfg '[:find ?s .
-               :in $ ?r
-               :where
-               [?d :arachne.component.dependency/entity ?r]
-               [?d :arachne.component.dependency/key :arachne.pedestal.config/router]
-               [?s :arachne.component/dependencies ?d]] router-eid))
+  (cfg/attr cfg router-eid :arachne.pedestal.interceptor/route :db/id))
 
 (defn routes
   "Given a Router component, an Arachne config and the entity ID of a
