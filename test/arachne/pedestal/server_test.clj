@@ -6,6 +6,7 @@
             [arachne.http :as http]
             [arachne.core.config :as cfg]
             [arachne.core.runtime :as rt]
+            [arachne.pedestal :as ped]
             [ring.util.response :as ring-resp]
             [clj-http.client :as client]))
 
@@ -132,3 +133,52 @@
     (let [rt (c/start rt)]
       (is (= "intercepted!" (slurp "http://localhost:8080")))
       (c/stop rt))))
+
+(defn interceptor-with-dep
+  "ctor for interceptor with dependency"
+  []
+  (ped/component-interceptor
+    {:leave (fn [component context]
+              (assoc context :response
+                             {:status 200
+                              :body (str (:dep component) "-interceptor")}))}))
+
+(defn handler-with-dep
+  "handler function that has a dependency"
+  [req]
+  {:status 200
+   :body (str (:dep req) "-handler")})
+
+(defn dep-ctor
+  "constructor for the dependency"
+  []
+  "testdep")
+
+(deftest ^:integration interceptor-and-handler-deps
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+              '(do
+                 (require '[arachne.core.dsl :as core])
+                 (require '[arachne.http.dsl :as http])
+                 (require '[arachne.pedestal.dsl :as ped])
+
+                 (core/runtime :test/rt [:test/server])
+
+                 (core/component :test/dep {}
+                   'arachne.pedestal.server-test/dep-ctor)
+
+                 (core/component :test/interceptor {:test/dep :dep}
+                   'arachne.pedestal.server-test/interceptor-with-dep)
+
+                 (http/handler :test/handler {:test/dep :dep}
+                   'arachne.pedestal.server-test/handler-with-dep)
+
+                 (ped/server :test/server 8080
+                   (http/endpoint :get "/interceptor" :test/interceptor )
+                   (http/endpoint :get "/handler" :test/handler))))
+        rt (rt/init cfg [:arachne/id :test/rt])]
+    (let [rt (c/start rt)]
+      (is (= "testdep-interceptor" (slurp "http://localhost:8080/interceptor")))
+      (is (= "testdep-handler" (slurp "http://localhost:8080/handler")))
+      (c/stop rt)))
+
+  )
