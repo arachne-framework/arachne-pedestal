@@ -1,31 +1,32 @@
 (ns arachne.pedestal-test
   (:require [clojure.test :refer :all]
             [arachne.core :as core]
-            [arachne.core.config :as cfg]))
+            [arachne.core.config :as cfg]
+            [arachne.core.dsl :as a]
+            [arachne.http.dsl :as h]
+            [arachne.pedestal.dsl :as p]))
+
+(defn basic-interceptors-cfg []
+
+  (a/runtime :test/rt [:test/server])
+
+  (a/component :test/i1 'test/ctor)
+  (a/component :test/i2 'test/ctor)
+  (a/component :test/i3 'test/ctor)
+
+  (p/server :test/server 8080
+
+    (p/interceptor :test/i1)
+
+    (p/interceptor "a/b" :test/i2)
+    (p/interceptor "a/b" :test/i3)
+
+    (h/context "x/y"
+      (p/interceptor (a/component :test/i4 'test/ctor)))))
 
 (deftest basic-interceptors
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
-              '(do
-                 (require '[arachne.core.dsl :as core])
-                 (require '[arachne.http.dsl :as http])
-                 (require '[arachne.pedestal.dsl :as ped])
-
-                 (core/runtime :test/rt [:test/server])
-
-                 (core/component :test/i1 {} 'test/ctor)
-                 (core/component :test/i2 {} 'test/ctor)
-                 (core/component :test/i3 {} 'test/ctor)
-
-                 (ped/server :test/server 8080
-
-                   (ped/interceptor :test/i1)
-
-                   (ped/interceptor "a/b" :test/i2)
-                   (ped/interceptor "a/b" :test/i3)
-
-                   (http/context "x/y"
-                     (ped/interceptor (core/component :test/i4 {} 'test/ctor))))
-                 ))]
+              `(basic-interceptors-cfg))]
 
     (is (cfg/q cfg '[:find [?server]
                      :where

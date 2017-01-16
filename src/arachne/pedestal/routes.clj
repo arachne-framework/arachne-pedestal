@@ -49,11 +49,10 @@
   [cfg eid]
   (let [is (:arachne.pedestal.interceptor/_route
              (cfg/pull cfg '[{:arachne.pedestal.interceptor/_route
-                          [:db/id
-                           (default :arachne.pedestal.interceptor/priority 0)]}]
+                              [:db/id :arachne.pedestal.interceptor/priority]}]
              eid))]
     (->> is
-      (sort-by :arachne.pedestal.interceptor/priority >)
+      (sort-by :arachne.pedestal.interceptor/priority <)
       (map :db/id))))
 
 (defn- interceptor-eids

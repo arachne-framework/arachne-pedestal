@@ -8,7 +8,10 @@
             [arachne.core.runtime :as rt]
             [arachne.pedestal :as ped]
             [ring.util.response :as ring-resp]
-            [clj-http.client :as client]))
+            [clj-http.client :as client]
+            [arachne.core.dsl :as a]
+            [arachne.http.dsl :as h]
+            [arachne.pedestal.dsl :as p]))
 
 (defn hello-world
   [request]
@@ -26,48 +29,25 @@
             (update-in ctx [:response :body]
               #(str/replace % "world" "Luke")))})
 
-(defrecord HandlerHandler []
-  http/Handler
-  (handle [_ _] (ring-resp/response "Hello from a handler!")))
+(defn handler
+  "Sample request handler"
+  [req]
+  (ring-resp/response "Hello from a handler!"))
+
+(defn hello-world-server-cfg []
+
+  (a/runtime :test/rt [:test/server])
+
+  (p/server :test/server 8080
+    (h/endpoint :get "/" (a/component `hello-world-handler) :name :hello-world)
+    (h/endpoint :get "/handler" (h/handler `handler))
+    (h/context "a"
+      (p/interceptor (a/component `a-interceptor))
+      (h/endpoint :get "b" (a/component `hello-world-handler) :name :hello-world-b))))
 
 (deftest ^:integration hello-world-server
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
-                  '(do
-                     (require '[arachne.core.dsl :as core])
-                     (require '[arachne.http.dsl :as http])
-                     (require '[arachne.pedestal.dsl :as ped])
-
-                     (core/runtime :test/rt [:test/server])
-
-                     (core/component :test/hello-world-handler {}
-                       'arachne.pedestal.server-test/hello-world-handler)
-
-                     (core/component :test/b-handler {}
-                       'arachne.pedestal.server-test/hello-world-handler)
-
-                     (core/component :test/handler-handler {}
-                       'arachne.pedestal.server-test/->HandlerHandler)
-
-                     (core/component :test/a-interceptor {}
-                       'arachne.pedestal.server-test/a-interceptor)
-
-                     (ped/server :test/server 8080
-
-                       (http/endpoint :get "/" :test/hello-world-handler)
-
-                       (http/endpoint :get "/handler" :test/handler-handler)
-
-                       (http/context "a"
-
-                         (ped/interceptor :test/a-interceptor)
-
-                         (http/endpoint :get "b" :test/b-handler)
-                         )
-
-                       )
-
-
-                     ))
+              `(hello-world-server-cfg))
         rt (rt/init cfg [:arachne/id :test/rt])]
 
     (let [rt (c/start rt)]
@@ -80,29 +60,22 @@
         (is (= "Not Found" (:body result))))
       (c/stop rt))))
 
-
 (defn invalid-handler
   []
   (java.util.Date.))
 
+(defn endpoint-validity-cfg []
+  (a/runtime :test/rt [:test/server])
+  (a/component :test/invalid-handler `invalid-handler)
+  (p/server :test/server 8080
+    (h/endpoint :get "/" :test/invalid-handler)))
+
 (deftest ^:integration endpoint-validity
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
-                  '(do
-                     (require '[arachne.core.dsl :as core])
-                     (require '[arachne.http.dsl :as http])
-                     (require '[arachne.pedestal.dsl :as ped])
-
-                     (core/runtime :test/rt [:test/server])
-
-                     (core/component :test/invalid-handler {}
-                       'arachne.pedestal.server-test/invalid-handler)
-
-                     (ped/server :test/server 8080
-                       (http/endpoint :get "/" :test/invalid-handler))))
+              `(endpoint-validity-cfg))
         rt (rt/init cfg [:arachne/id :test/rt])]
     (is (thrown-with-msg? Throwable #"Error in component"
           (c/start rt)))))
-
 
 (defn root-interceptor
   []
@@ -110,24 +83,19 @@
             (assoc ctx :response {:status 200
                                   :body "intercepted!"}))})
 
+(defn root-interceptors-cfg []
+
+  (a/runtime :test/rt [:test/server])
+  (a/component :test/hello-world-handler `hello-world-handler)
+  (a/component :test/root-interceptor `root-interceptor)
+
+  (p/server :test/server 8080
+    (p/interceptor "/" :test/root-interceptor)
+    (h/endpoint :get "/" :test/hello-world-handler)))
+
 (deftest ^:integration root-interceptors
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
-                  '(do
-                     (require '[arachne.core.dsl :as core])
-                     (require '[arachne.http.dsl :as http])
-                     (require '[arachne.pedestal.dsl :as ped])
-
-                     (core/runtime :test/rt [:test/server])
-
-                     (core/component :test/hello-world-handler {}
-                       'arachne.pedestal.server-test/hello-world-handler)
-
-                     (core/component :test/root-interceptor
-                       'arachne.pedestal.server-test/root-interceptor)
-
-                     (ped/server :test/server 8080
-                       (ped/interceptor "/" :test/root-interceptor)
-                       (http/endpoint :get "/" :test/hello-world-handler))))
+              `(root-interceptors-cfg))
         rt (rt/init cfg [:arachne/id :test/rt])]
 
     (let [rt (c/start rt)]
@@ -154,27 +122,22 @@
   []
   "testdep")
 
+(defn interceptor-and-handler-deps-cfg []
+  (a/runtime :test/rt [:test/server])
+
+  (a/component :test/dep `dep-ctor)
+
+  (a/component :test/interceptor `interceptor-with-dep {:dep :test/dep})
+
+  (h/handler :test/handler `handler-with-dep {:dep :test/dep})
+
+  (p/server :test/server 8080
+    (h/endpoint :get "/interceptor" :test/interceptor)
+    (h/endpoint :get "/handler" :test/handler)))
+
 (deftest ^:integration interceptor-and-handler-deps
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
-              '(do
-                 (require '[arachne.core.dsl :as core])
-                 (require '[arachne.http.dsl :as http])
-                 (require '[arachne.pedestal.dsl :as ped])
-
-                 (core/runtime :test/rt [:test/server])
-
-                 (core/component :test/dep {}
-                   'arachne.pedestal.server-test/dep-ctor)
-
-                 (core/component :test/interceptor {:test/dep :dep}
-                   'arachne.pedestal.server-test/interceptor-with-dep)
-
-                 (http/handler :test/handler {:test/dep :dep}
-                   'arachne.pedestal.server-test/handler-with-dep)
-
-                 (ped/server :test/server 8080
-                   (http/endpoint :get "/interceptor" :test/interceptor )
-                   (http/endpoint :get "/handler" :test/handler))))
+              `(interceptor-and-handler-deps-cfg))
         rt (rt/init cfg [:arachne/id :test/rt])]
     (let [rt (c/start rt)]
       (is (= "testdep-interceptor" (slurp "http://localhost:8080/interceptor")))

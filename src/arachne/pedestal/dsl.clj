@@ -1,25 +1,32 @@
 (ns arachne.pedestal.dsl
-  (:require [arachne.pedestal.dsl.specs]
+  (:require [arachne.core.dsl :as core-dsl]
             [arachne.http.dsl :as http-dsl]
             [arachne.core.config :as cfg]
             [arachne.core.util :as util]
             [arachne.error :as e]
-            [arachne.core.config.init :as script :refer [defdsl]]
+            [arachne.core.config.script :as script :refer [defdsl]]
             [clojure.spec :as s]
             [clojure.string :as str]))
 
 (defdsl create-server
   "Define an Pedestal HTTP server entity with the given Arachne ID and port. Return
   the tempid of the new server."
+  (s/cat :arachne-id ::core-dsl/arachne-id
+         :port integer?)
   [arachne-id port]
-  (let [server-tid (cfg/tempid)
-        new-cfg (script/transact
-                  [{:db/id server-tid
-                    :arachne/id arachne-id
-                    :arachne/instance-of {:db/ident :arachne.pedestal/Server}
-                    :arachne.component/constructor :arachne.pedestal.server/constructor
-                    :arachne.http.server/port port}])]
-    (cfg/resolve-tempid new-cfg server-tid)))
+  (let [server-tid (cfg/tempid)]
+    (script/transact
+      [{:db/id server-tid
+        :arachne/id arachne-id
+        :arachne/instance-of {:db/ident :arachne.pedestal/Server}
+        :arachne.component/constructor :arachne.pedestal.server/constructor
+        :arachne.http.server/port port}]
+      server-tid)))
+
+(s/fdef server
+  :args (s/cat :arachne-id ::core-dsl/arachne-id
+          :port integer?
+          :body (s/* any?)))
 
 (defmacro server
   "Define a Pedestal HTTP server in the current configuration. Evaluates the body with
@@ -32,29 +39,35 @@
        ~@body)
      server-eid#))
 
+(s/def ::priority integer?)
+
 (defdsl interceptor
-  "Define a Pedestal interceptor at the specified path."
-  [& args]
-  (let [conformed (s/conform (:args (s/get-spec `interceptor)) args)
-        path (http-dsl/with-context (or (:path conformed) ""))
-        id (-> conformed :identity val)
-        arachne-id (when (keyword? id) id)
-        eid (when (pos-int? id) id)
-        tid (cfg/tempid)
+  "Define a component to be a Pedestal interceptor attached to the specified path.
+
+  Arguments are:
+
+  - path (optional) - the path to attach the interceptor (defaults to '/' in the current context)
+  - component (mandatory) - the Arachne component. The runtime instance of the component must satisfy
+    Pedestal's IntoInterceptor protocol.
+  - options (optional) - A map (or kwargs) of additional options.
+
+  Currently supported options are:
+
+  - priority (optional) - the priority relative to other interceptors defined at the same path. If omitted,
+    defaults to the lexical order of the config script"
+
+  (s/cat
+    :path (s/? string?)
+    :component ::core-dsl/ref
+    :opts (util/keys** :opt-un [::priority]))
+  [<path> component & opts]
+  (let [path (http-dsl/with-context (or (:path &args) ""))
+        eid (core-dsl/resolved-ref (:component &args))
         segment (http-dsl/ensure-path path)
-        priority (or (:priority conformed)
-                   ((fnil inc 0)
-                     (cfg/q @script/*config*
-                       '[:find (max ?p) .
-                         :in $ ?segment
-                         :where
-                         [?i :arachne.pedestal.interceptor/route ?segment]
-                         [?i :arachne.pedestal.interceptor/priority ?p]]
-                       segment)))
-        txdata (util/mkeep
-                 {:db/id (or eid tid)
-                  :arachne/id arachne-id
+        priority (-> &args :opts second :priority)
+        entity (util/mkeep
+                 {:db/id eid
                   :arachne.pedestal.interceptor/route segment
-                  :arachne.pedestal.interceptor/priority priority})
-        new-cfg (script/transact [txdata])]
-    (or eid (cfg/resolve-tempid new-cfg tid))))
+                  :arachne.pedestal.interceptor/priority priority})]
+    (script/transact [entity])
+    eid))

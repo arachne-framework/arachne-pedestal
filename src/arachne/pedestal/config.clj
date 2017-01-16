@@ -117,3 +117,30 @@
                           {:db/id e
                            :arachne/instance-of
                            {:db/ident :arachne.pedestal/Endpoint}}))))))
+
+(defn add-interceptor-default-ordering
+  "Assigns a default ordering to all interceptors that don't have an explicit order.
+
+   The assigned order is based on the tx, and therefore should correspond to lexical
+   order in which interceptors were declared in a configuration file."
+  [cfg]
+  (let [interceptors (set (cfg/q cfg '[:find ?segment ?interceptor ?tx
+                                       :in $
+                                       :where
+                                       [?interceptor :arachne.pedestal.interceptor/route ?segment ?tx]
+                                       [(missing? $ ?interceptor :arachne.pedestal.interceptor/priority)]]))
+        groups (vals (group-by first interceptors))
+        txdata (mapcat (fn [group]
+                         (let [in-order (->> group
+                                          (map #(drop 1 %))
+                                          (sort-by second)
+                                          (map first))]
+                           (map (fn [eid priority]
+                                  [:db/add eid :arachne.pedestal.interceptor/priority priority])
+                             in-order (iterate inc -10000)))) groups)]
+
+    (if (empty? txdata)
+      cfg
+      (cfg/with-provenance :module `add-interceptor-default-ordering
+        (cfg/update cfg txdata)))))
+

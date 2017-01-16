@@ -16,7 +16,8 @@
   [cfg]
   (-> cfg
     (ped-cfg/add-default-interceptors)
-    (ped-cfg/add-endpoint-types)))
+    (ped-cfg/add-endpoint-types)
+    (ped-cfg/add-interceptor-default-ordering)))
 
 (defrecord InterceptorComponent [name enter error leave]
   i/IntoInterceptor
