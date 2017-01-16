@@ -10,39 +10,6 @@
             [clojure.string :as str]
             [io.pedestal.interceptor :as i]))
 
-(defn- endpoints
-  "Return the EIDs of all endpoints that are children of a root route segment"
-  [cfg root-eid]
-  (cfg/q cfg '[:find [?e ...]
-               :in $ % ?root
-               :where
-               (endpoints ?root ?e)]
-    http-cfg/route-rules root-eid))
-
-(defn- route-segments
-  "Return an ordered list of segments between the root server and a given endpoint"
-  [cfg eid]
-  (reverse
-    (take-while identity
-      (iterate (fn [eid]
-                 (cfg/attr cfg eid :arachne.http.route-segment/parent :db/id))
-        (cfg/attr cfg eid :arachne.http.endpoint/route :db/id)))))
-
-
-(defn- route-path
-  "Build a route path , given an endpoint eid."
-  [cfg endpoint]
-  (let [segments (route-segments cfg endpoint)
-        path (str/join "/"
-              (for [seg segments]
-                (let [s (cfg/pull cfg '[*] seg)]
-                  (or (:arachne.http.route-segment/pattern s)
-                    (:arachne.http.route-segment/param s)
-                    (when (:arachne.http.route-segment/wildcard s) "*")))))]
-    (if (str/blank? path)
-      "/"
-      path)))
-
 (defn interceptors-for
   "Given a route segment eid, return a seq of the EIDs of its directly attached
   interceptors (in correct order)"
@@ -60,7 +27,7 @@
   endpoint eid. These are interceptors attached to the endpoint route segment
   and each of its parent route segments (but not the root server)"
   [cfg endpoint]
-  (let [segments (drop 1 (route-segments cfg endpoint))]
+  (let [segments (drop 1 (http-cfg/route-segments cfg endpoint))]
     (concat (mapcat #(interceptors-for cfg %) segments) [endpoint])))
 
 (deferror ::invalid-interceptor
@@ -88,7 +55,7 @@
   (for [method (cfg/attr cfg eid :arachne.http.endpoint/methods)]
     {:route-name (cfg/attr cfg eid :arachne.http.endpoint/name)
      :method method
-     :path (route-path cfg eid)
+     :path (http-cfg/route-path cfg eid)
      :interceptors (map #(interceptor cfg % (get router %))
                      (interceptor-eids cfg eid))}))
 
@@ -104,7 +71,7 @@
   [router cfg eid]
   (reify r/ExpandableRoutes
     (-expand-routes [_]
-      (mapcat #(route router cfg %) (endpoints cfg eid)))))
+      (mapcat #(route router cfg %) (http-cfg/endpoints cfg eid)))))
 
 (defrecord Router [cfg eid]
   interceptor/IntoInterceptor
