@@ -8,14 +8,12 @@
                       commons-io
                       joda-time
                       org.clojure/clojure
-         ;             org.clojure/core.async
                       org.clojure/data.priority-map
                       ring/ring-codec
                       ring/ring-core]]
-        ;[org.clojure/core.async "0.2.395"]
         [io.pedestal/pedestal.jetty "0.5.2"
          :exclusions [org.clojure/clojure]]
-        [org.arachne-framework/arachne-http "0.1.0-master-0048-91d7a6e"
+        [org.arachne-framework/arachne-http "0.1.0-master-0049-6acc7af"
          :exclusions [commons-codec
                       org.clojure/tools.reader]]
         [adzerk/boot-test "1.1.2" :scope "test"]
