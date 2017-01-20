@@ -6,12 +6,12 @@
             [arachne.pedestal.specs]
             [io.pedestal.interceptor :as i]))
 
-(defn schema
+(defn ^:no-doc schema
   "Return the schema for the core module"
   []
   schema/schema)
 
-(defn configure
+(defn ^:no-doc configure
   "Configure the core module"
   [cfg]
   (-> cfg
