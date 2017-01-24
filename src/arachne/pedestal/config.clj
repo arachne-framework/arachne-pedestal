@@ -43,7 +43,6 @@
         [(util/mkeep
            {:db/id router-eid
             :arachne.pedestal.interceptor/route server-eid
-            :arachne.pedestal.interceptor/priority 5
             :arachne.component/constructor :arachne.pedestal.routes/->Router
             :arachne.component/dependencies deps})]))))
 
@@ -56,19 +55,14 @@
   (cfg/with-provenance :module `add-standard-interceptors
     (cfg/update cfg
       [{:arachne.pedestal.interceptor/route server-eid
-        :arachne.pedestal.interceptor/priority 10
         :arachne.component/instance :io.pedestal.http/not-found}
        {:arachne.pedestal.interceptor/route server-eid
-        :arachne.pedestal.interceptor/priority 9
         :arachne.component/instance :io.pedestal.http/log-request}
        {:arachne.pedestal.interceptor/route server-eid
-        :arachne.pedestal.interceptor/priority 8
         :arachne.component/constructor :arachne.pedestal.server/content-type-interceptor}
        {:arachne.pedestal.interceptor/route server-eid
-        :arachne.pedestal.interceptor/priority 7
         :arachne.component/instance :io.pedestal.http.route/query-params}
        {:arachne.pedestal.interceptor/route server-eid
-        :arachne.pedestal.interceptor/priority 6
         :arachne.component/constructor :arachne.pedestal.server/method-param-interceptor}])))
 
 (defn add-server-interceptor-deps
@@ -121,23 +115,33 @@
 (defn add-interceptor-default-ordering
   "Assigns a default ordering to all interceptors that don't have an explicit order.
 
-   The assigned order is based on the tx, and therefore should correspond to lexical
-   order in which interceptors were declared in a configuration file."
+   The assigned order is based on the tx, and therefore should correspond to lexical order in
+   which interceptors were declared in a configuration file: interceptors declared first have a
+   higher lexical priority.
+
+   Automatically assigned priorities start at -1 and count down."
   [cfg]
   (let [interceptors (set (cfg/q cfg '[:find ?segment ?interceptor ?tx
                                        :in $
                                        :where
                                        [?interceptor :arachne.pedestal.interceptor/route ?segment ?tx]
                                        [(missing? $ ?interceptor :arachne.pedestal.interceptor/priority)]]))
-        groups (vals (group-by first interceptors))
-        txdata (mapcat (fn [group]
-                         (let [in-order (->> group
+        groups (group-by first interceptors)
+        txdata (mapcat (fn [[route-segment interceptors]]
+                         (let [in-order (->> interceptors
                                           (map #(drop 1 %))
                                           (sort-by second)
-                                          (map first))]
-                           (map (fn [eid priority]
-                                  [:db/add eid :arachne.pedestal.interceptor/priority priority])
-                             in-order (iterate inc -10000)))) groups)]
+                                          (map first))
+                               starting-priority (cfg/q cfg '[:find ?p .
+                                                              :in $ ?r
+                                                              :where
+                                                              [?i :arachne.pedestal.interceptor/route ?r]
+                                                              [?i :arachne.pedestal.interceptor/priority ?p]]
+                                                   route-segment)
+                               starting-priority (or starting-priority -1)]
+                           (map (fn [eid priority] [:db/add eid :arachne.pedestal.interceptor/priority priority])
+                             in-order
+                             (iterate dec starting-priority)))) groups)]
 
     (if (empty? txdata)
       cfg

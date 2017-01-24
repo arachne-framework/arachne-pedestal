@@ -19,7 +19,7 @@
                               [:db/id :arachne.pedestal.interceptor/priority]}]
              eid))]
     (->> is
-      (sort-by :arachne.pedestal.interceptor/priority <)
+      (sort-by :arachne.pedestal.interceptor/priority >)
       (map :db/id))))
 
 (defn- interceptor-eids
