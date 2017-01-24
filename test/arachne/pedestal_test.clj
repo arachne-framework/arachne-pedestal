@@ -85,4 +85,14 @@
            (sort-by pri [:test/a1 :test/a2 :test/a3 :test/a4])))
 
     (is (= [:test/b2 :test/b1 :test/b3 :test/b4]
-          (sort-by pri [:test/b1 :test/b2 :test/b3 :test/b4])))))
+          (sort-by pri [:test/b1 :test/b2 :test/b3 :test/b4])))
+
+    (let [roots (cfg/q cfg '[:find [?i ...]
+                             :where
+                             [?s :arachne/id :test/server]
+                             [?i :arachne.pedestal.interceptor/route ?s]])
+          roots (map #(cfg/pull cfg '[*] %) roots)
+          built-in-roots (filter #(not (:arachne/id %)) roots)]
+
+      (for [root built-in-roots]
+        (is (< (:arachne.pedestal.interceptor/priority root) (pri :test/a2)))))))

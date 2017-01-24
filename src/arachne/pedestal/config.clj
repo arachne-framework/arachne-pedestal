@@ -29,6 +29,19 @@
                (interceptors ?segment ?interceptor)]
     server-eid interceptor-rules))
 
+(defn- lowest-priority
+  "Given a route segment eid, return the lowest priority interceptor attached to that route in the
+   given config, 0 if no interceptors have a priority."
+  [cfg route]
+  (or
+    (cfg/q cfg '[:find (min ?p) .
+                 :in $ ?r
+                 :where
+                 [?i :arachne.pedestal.interceptor/route ?r]
+                 [?i :arachne.pedestal.interceptor/priority ?p]]
+      route)
+    0))
+
 (defn- add-router-interceptor
   "Create a router interceptor, attached to the given server eid, with
   dependencies on all child endpoints and interceptors"
@@ -43,6 +56,7 @@
         [(util/mkeep
            {:db/id router-eid
             :arachne.pedestal.interceptor/route server-eid
+            :arachne.pedestal.interceptor/priority (dec (lowest-priority cfg server-eid))
             :arachne.component/constructor :arachne.pedestal.routes/->Router
             :arachne.component/dependencies deps})]))))
 
@@ -52,18 +66,24 @@
   Note: a lot of these should probably be more configurable. This is
   straightforward to do, just read the config first."
   [cfg server-eid]
-  (cfg/with-provenance :module `add-standard-interceptors
-    (cfg/update cfg
-      [{:arachne.pedestal.interceptor/route server-eid
-        :arachne.component/instance :io.pedestal.http/not-found}
-       {:arachne.pedestal.interceptor/route server-eid
-        :arachne.component/instance :io.pedestal.http/log-request}
-       {:arachne.pedestal.interceptor/route server-eid
-        :arachne.component/constructor :arachne.pedestal.server/content-type-interceptor}
-       {:arachne.pedestal.interceptor/route server-eid
-        :arachne.component/instance :io.pedestal.http.route/query-params}
-       {:arachne.pedestal.interceptor/route server-eid
-        :arachne.component/constructor :arachne.pedestal.server/method-param-interceptor}])))
+  (let [p (lowest-priority cfg server-eid)]
+    (cfg/with-provenance :module `add-standard-interceptors
+      (cfg/update cfg
+        [{:arachne.pedestal.interceptor/route server-eid
+          :arachne.pedestal.interceptor/priority (- p 1)
+          :arachne.component/instance :io.pedestal.http/not-found}
+         {:arachne.pedestal.interceptor/route server-eid
+          :arachne.pedestal.interceptor/priority (- p 2)
+          :arachne.component/instance :io.pedestal.http/log-request}
+         {:arachne.pedestal.interceptor/route server-eid
+          :arachne.pedestal.interceptor/priority (- p 3)
+          :arachne.component/constructor :arachne.pedestal.server/content-type-interceptor}
+         {:arachne.pedestal.interceptor/route server-eid
+          :arachne.pedestal.interceptor/priority (- p 4)
+          :arachne.component/instance :io.pedestal.http.route/query-params}
+         {:arachne.pedestal.interceptor/route server-eid
+          :arachne.pedestal.interceptor/priority (- p 5)
+          :arachne.component/constructor :arachne.pedestal.server/method-param-interceptor}]))))
 
 (defn add-server-interceptor-deps
   "Ensure that the server has a component dependency on all of its directly
@@ -131,17 +151,10 @@
                          (let [in-order (->> interceptors
                                           (map #(drop 1 %))
                                           (sort-by second)
-                                          (map first))
-                               starting-priority (cfg/q cfg '[:find ?p .
-                                                              :in $ ?r
-                                                              :where
-                                                              [?i :arachne.pedestal.interceptor/route ?r]
-                                                              [?i :arachne.pedestal.interceptor/priority ?p]]
-                                                   route-segment)
-                               starting-priority (or starting-priority -1)]
+                                          (map first))]
                            (map (fn [eid priority] [:db/add eid :arachne.pedestal.interceptor/priority priority])
                              in-order
-                             (iterate dec starting-priority)))) groups)]
+                             (iterate dec (dec (lowest-priority cfg route-segment)))))) groups)]
 
     (if (empty? txdata)
       cfg
