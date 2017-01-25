@@ -27,7 +27,8 @@
   endpoint eid. These are interceptors attached to the endpoint route segment
   and each of its parent route segments (but not the root server)"
   [cfg endpoint]
-  (let [segments (drop 1 (http-cfg/route-segments cfg endpoint))]
+  (let [route-segment (cfg/attr cfg endpoint :arachne.http.endpoint/route :db/id)
+        segments (drop 1 (http-cfg/route-segments cfg route-segment))]
     (concat (mapcat #(interceptors-for cfg %) segments) [endpoint])))
 
 (deferror ::invalid-interceptor
@@ -55,7 +56,7 @@
   (for [method (cfg/attr cfg eid :arachne.http.endpoint/methods)]
     {:route-name (cfg/attr cfg eid :arachne.http.endpoint/name)
      :method method
-     :path (http-cfg/route-path cfg eid)
+     :path (http-cfg/route-path cfg (cfg/attr cfg eid :arachne.http.endpoint/route :db/id))
      :interceptors (map #(interceptor cfg % (get router %))
                      (interceptor-eids cfg eid))}))
 
