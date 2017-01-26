@@ -142,6 +142,22 @@
     (let [rt (c/start rt)]
       (is (= "testdep-interceptor" (slurp "http://localhost:8080/interceptor")))
       (is (= "testdep-handler" (slurp "http://localhost:8080/handler")))
-      (c/stop rt)))
+      (c/stop rt))))
 
-  )
+(defn handler-a
+  [request]
+  (ring-resp/response (:wild (:path-params request))))
+
+(defn wildcard-path-cfg []
+  (a/runtime :test/rt [:test/server])
+  (p/server :test/server 8080
+    (h/endpoint :get "/a/b/*wild" (h/handler `handler-a))))
+
+
+(deftest ^:integration wildcard-path-test
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+              `(wildcard-path-cfg))
+        rt (rt/init cfg [:arachne/id :test/rt])]
+    (let [rt (c/start rt)]
+      (is (= "foo/bar" (slurp "http://localhost:8080/a/b/foo/bar")))
+      (c/stop rt))))
