@@ -1,6 +1,7 @@
 (ns arachne.pedestal.server-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
+            [io.pedestal.http.route :as r]
             [com.stuartsierra.component :as c]
             [arachne.core :as core]
             [arachne.http :as http]
@@ -153,11 +154,27 @@
   (p/server :test/server 8080
     (h/endpoint :get "/a/b/*wild" (h/handler `handler-a))))
 
-
 (deftest ^:integration wildcard-path-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(wildcard-path-cfg))
         rt (rt/init cfg [:arachne/id :test/rt])]
     (let [rt (c/start rt)]
       (is (= "foo/bar" (slurp "http://localhost:8080/a/b/foo/bar")))
+      (c/stop rt))))
+
+(defn handler-url-for
+  [request]
+  (ring-resp/response (r/url-for ::handler-url-for)))
+
+(defn url-for-cfg []
+  (a/runtime :test/rt [:test/server])
+  (p/server :test/server 8080
+            (h/endpoint :get "/foo/:a/baz" (h/handler `handler-url-for))))
+
+(deftest ^:integration url-for-test
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+                               `(url-for-cfg))
+        rt (rt/init cfg [:arachne/id :test/rt])]
+    (let [rt (c/start rt)]
+      (is (= "/foo/bar/baz" (slurp "http://localhost:8080/foo/bar/baz")))
       (c/stop rt))))
