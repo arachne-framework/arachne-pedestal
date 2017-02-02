@@ -7,6 +7,7 @@
             [arachne.http :as http]
             [io.pedestal.interceptor :as interceptor]
             [io.pedestal.http.route :as r]
+            [io.pedestal.http.route.path :as path]
             [clojure.string :as str]
             [io.pedestal.interceptor :as i]))
 
@@ -54,11 +55,13 @@
   "Return a seq of Pedestal route maps for the given endpoint EID"
   [router cfg eid]
   (for [method (cfg/attr cfg eid :arachne.http.endpoint/methods)]
-    {:route-name (cfg/attr cfg eid :arachne.http.endpoint/name)
-     :method method
-     :path (http-cfg/route-path cfg (cfg/attr cfg eid :arachne.http.endpoint/route :db/id))
-     :interceptors (map #(interceptor cfg % (get router %))
-                     (interceptor-eids cfg eid))}))
+    (let [path (http-cfg/route-path cfg (cfg/attr cfg eid :arachne.http.endpoint/route :db/id))]
+      (merge (path/parse-path path)
+             {:route-name (cfg/attr cfg eid :arachne.http.endpoint/name)
+              :method method
+              :path path
+              :interceptors (map #(interceptor cfg % (get router %))
+                                 (interceptor-eids cfg eid))}))))
 
 (defn- server-router
   "Find server object associated with a given router"
