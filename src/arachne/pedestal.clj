@@ -28,12 +28,13 @@
       (when error (fn [ctx ex] (error component ctx ex))))))
 
 (defn component-interceptor
-  "Takes a Pedestal-style interceptor map and returns a Pedestal IntoInterceptor.
+  "Utility to help build interceptor components with dependencies.
 
-  However, in the map passed to this function, each of the handler functions
-  (for :enter, :leave and :error) takes an additional first argument, the
-  component instance itself. This is intended to make it easy to write
-  interceptors that have access to their dependencies.
+  Takes a Pedestal-style interceptor map and returns an object satisfying Pedestal IntoInterceptor.
+
+  The difference iswever, in the map passed to this function, each of the handler functions (for
+  :enter, :leave and :error) takes an additional first argument, the component instance itself.
+  This is intended to make it easy to write interceptors that have access to their dependencies.
 
   For example:
 

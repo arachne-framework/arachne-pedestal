@@ -1,4 +1,5 @@
 (ns arachne.pedestal.dsl
+  "User-facing DSL functions for init scripts"
   (:require [arachne.core.dsl :as core-dsl]
             [arachne.http.dsl :as http-dsl]
             [arachne.core.config :as cfg]
@@ -9,8 +10,8 @@
             [clojure.string :as str]))
 
 (defdsl create-server
-  "Define an Pedestal HTTP server entity with the given Arachne ID and port. Return
-  the tempid of the new server."
+  "Define an Pedestal HTTP server entity with the given Arachne ID and port, in the current
+  configuration. Return the tempid of the new server."
   (s/cat :arachne-id ::core-dsl/arachne-id
          :port integer?)
   [arachne-id port]
@@ -29,9 +30,8 @@
           :body (s/* any?)))
 
 (defmacro server
-  "Define a Pedestal HTTP server in the current configuration. Evaluates the body with
-  the server bound as the context server. Returns the eid of the Server
-  component."
+  "Define a Pedestal HTTP server in the current configuration. Evaluates the body with the server
+  bound as the context server. Returns the eid of the server component."
   [arachne-id port & body]
   (apply e/assert-args `server arachne-id port body)
   `(let [server-eid# (create-server ~arachne-id ~port)]
@@ -53,8 +53,8 @@
 
   Currently supported options are:
 
-  - priority (optional) - the priority relative to other interceptors defined at the same path. If omitted,
-    defaults to the lexical order of the config script"
+  - priority (optional) - the priority relative to other interceptors defined at the same path. If
+    omitted, defaults to the lexical order of the config script"
 
   (s/cat
     :path (s/? string?)
