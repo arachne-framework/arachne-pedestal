@@ -53,15 +53,21 @@
 
 (defn- route
   "Return a seq of Pedestal route maps for the given endpoint EID"
-  [router cfg eid]
+  [cfg eid]
   (for [method (cfg/attr cfg eid :arachne.http.endpoint/methods)]
     (let [path (http-cfg/route-path cfg (cfg/attr cfg eid :arachne.http.endpoint/route :db/id))]
       (merge (path/parse-path path)
-             {:route-name (cfg/attr cfg eid :arachne.http.endpoint/name)
-              :method method
-              :path path
-              :interceptors (map #(interceptor cfg % (get router %))
-                                 (interceptor-eids cfg eid))}))))
+             {:endpoint-eid eid
+              :route-name   (cfg/attr cfg eid :arachne.http.endpoint/name)
+              :method       method
+              :path         path}))))
+
+(defn- attach-interceptors
+  "Given a Router component, Arachne config and an expanded route structure,
+   return the expanded route with interceptors attached."
+  [router cfg route]
+  (assoc route :interceptors (map #(interceptor cfg % (get router %))
+                                  (interceptor-eids cfg (:endpoint-eid route)))))
 
 (defn- server-router
   "Find server object associated with a given router"
@@ -69,16 +75,22 @@
   (cfg/attr cfg router-eid :arachne.pedestal.interceptor/route :db/id))
 
 (defn routes
+  "Given an Arachne config and the entity ID of a RouteSegment,
+  return the expanded routes for the segment and all its children."
+  [cfg eid]
+  (mapcat #(route cfg %) (http-cfg/endpoints cfg eid)))
+
+(defn routes-with-interceptors
   "Given a Router component, an Arachne config and the entity ID of a
   RouteSegment, return a Pedestal ExpandableRoutes object representing the
   routing structure of the segment and all its children."
   [router cfg eid]
   (reify r/ExpandableRoutes
     (-expand-routes [_]
-      (mapcat #(route router cfg %) (http-cfg/endpoints cfg eid)))))
+      (map #(attach-interceptors router cfg %) (routes cfg eid)))))
 
 (defrecord Router [cfg eid]
   interceptor/IntoInterceptor
   (-interceptor [this]
-    (r/router (r/expand-routes (routes this cfg (server-router cfg eid)))
+    (r/router (r/expand-routes (routes-with-interceptors this cfg (server-router cfg eid)))
       :map-tree)))

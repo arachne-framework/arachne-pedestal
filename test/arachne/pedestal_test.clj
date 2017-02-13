@@ -4,7 +4,9 @@
             [arachne.core.config :as cfg]
             [arachne.core.dsl :as a]
             [arachne.http.dsl :as h]
-            [arachne.pedestal.dsl :as p]))
+            [arachne.pedestal.dsl :as p]
+            [arachne.pedestal.routes :as routes]
+            [io.pedestal.http.route :as http.route]))
 
 (defn basic-interceptors-cfg []
 
@@ -96,3 +98,16 @@
 
       (for [root built-in-roots]
         (is (< (:arachne.pedestal.interceptor/priority root) (pri :test/a2)))))))
+
+(defn handler-url-for [_])
+
+(defn url-for-cfg []
+  (a/runtime :test/rt [:test/server])
+  (p/server :test/server 8080
+            (h/endpoint :get "/foo/:a/baz" (h/handler `handler-url-for))))
+
+(deftest url-for-test
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+                               `(url-for-cfg))
+        url-for (http.route/url-for-routes (routes/routes cfg [:arachne/id :test/server]))]
+    (is (= "/foo/bar/baz" (url-for ::handler-url-for :path-params {:a "bar"})))))
