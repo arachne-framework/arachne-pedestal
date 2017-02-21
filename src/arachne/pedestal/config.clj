@@ -46,9 +46,9 @@
   "Create a router interceptor, attached to the given server eid, with
   dependencies on all child endpoints and interceptors"
   [cfg server-eid]
-  (let [endpoints (http-cfg/find-endpoints cfg server-eid)
+  (let [endpoint-handlers (http-cfg/find-endpoint-handlers cfg server-eid)
         interceptors (find-route-interceptors cfg server-eid)
-        deps (for [dep (concat endpoints interceptors)]
+        deps (for [dep (concat endpoint-handlers interceptors)]
                {:arachne.component.dependency/entity dep})
         router-eid (cfg/tempid)]
     (cfg/with-provenance :module `add-router-interceptor
@@ -57,7 +57,7 @@
            {:db/id router-eid
             :arachne.pedestal.interceptor/route server-eid
             :arachne.pedestal.interceptor/priority (dec (lowest-priority cfg server-eid))
-            :arachne.component/constructor :arachne.pedestal.routes/->Router
+            :arachne.component/constructor :arachne.pedestal.routes/router-interceptor
             :arachne.component/dependencies deps})]))))
 
 (defn- add-standard-interceptors

@@ -6,7 +6,8 @@
             [arachne.http.dsl :as h]
             [arachne.pedestal.dsl :as p]
             [arachne.pedestal.routes :as routes]
-            [io.pedestal.http.route :as http.route]))
+            [io.pedestal.http.route :as http.route]
+            [com.stuartsierra.component :as component]))
 
 (defn basic-interceptors-cfg []
 
@@ -111,3 +112,28 @@
                                `(url-for-cfg))
         url-for (http.route/url-for-routes (routes/routes cfg [:arachne/id :test/server]))]
     (is (= "/foo/bar/baz" (url-for ::handler-url-for :path-params {:a "bar"})))))
+
+(defn handler []
+  {:status 200
+   :body "OK"})
+
+(defn multiple-method-config []
+
+  (a/runtime :test/rt [:test/server])
+
+  (h/handler :test/handler `handler)
+
+  (p/server :test/server 8080
+
+    (h/endpoint #{:post :put} "/foo" :test/handler)
+
+    ))
+
+(deftest multiple-method-test
+  (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
+              `(multiple-method-config) true)
+        routes (routes/routes cfg [:arachne/id :test/server])
+        url-for (http.route/url-for-routes routes)]
+
+    (is (= "/foo" (url-for :test/handler-post)))
+    (is (= "/foo" (url-for :test/handler-put)))))

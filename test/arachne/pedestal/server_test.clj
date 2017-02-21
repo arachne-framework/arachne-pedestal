@@ -49,9 +49,9 @@
 (deftest ^:integration hello-world-server
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(hello-world-server-cfg))
-        rt (rt/init cfg [:arachne/id :test/rt])]
-
-    (let [rt (c/start rt)]
+        rt (atom (rt/init cfg [:arachne/id :test/rt]))]
+    (try
+      (swap! rt c/start)
       (is (= "Hello, world!" (slurp "http://localhost:8080")))
       (is (= "Hello from a handler!" (slurp "http://localhost:8080/handler")))
       (is (= "Hello, Luke!" (slurp "http://localhost:8080/a/b")))
@@ -59,7 +59,9 @@
                         (catch Exception e (ex-data e)))]
         (is (= 404 (:status result)))
         (is (= "Not Found" (:body result))))
-      (c/stop rt))))
+      (finally
+        (swap! rt c/stop)))))
+
 
 (defn invalid-handler
   []
@@ -74,9 +76,31 @@
 (deftest ^:integration endpoint-validity
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(endpoint-validity-cfg))
-        rt (rt/init cfg [:arachne/id :test/rt])]
-    (is (thrown-with-msg? Throwable #"Error in component"
-          (c/start rt)))))
+        rt (atom (rt/init cfg [:arachne/id :test/rt]))]
+    (try
+      (is (thrown-with-msg? Throwable #"Error in component"
+            (swap! rt c/start)))
+
+      ;(println "result:" (slurp "http://localhost:8080"))
+
+      (finally
+        (swap! rt c/stop)))))
+
+(comment
+  (def cfg arachne.pedestal.routes/*cfg*)
+
+  (clojure.pprint/pprint
+    (cfg/pull cfg '[*] 17592186045440))
+
+  (@#'arachne.pedestal.routes/interceptors-for cfg 17592186045440)
+
+
+  (cfg/pull cfg '[*] 17592186045450)
+
+
+  (arachne.pedestal.routes/routes cfg 17592186045440)
+
+  )
 
 (defn root-interceptor
   []
@@ -97,11 +121,12 @@
 (deftest ^:integration root-interceptors
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(root-interceptors-cfg))
-        rt (rt/init cfg [:arachne/id :test/rt])]
-
-    (let [rt (c/start rt)]
+        rt (atom (rt/init cfg [:arachne/id :test/rt]))]
+    (try
+      (swap! rt c/start)
       (is (= "intercepted!" (slurp "http://localhost:8080")))
-      (c/stop rt))))
+      (finally
+        (swap! rt c/stop)))))
 
 (defn interceptor-with-dep
   "ctor for interceptor with dependency"
@@ -139,11 +164,13 @@
 (deftest ^:integration interceptor-and-handler-deps
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(interceptor-and-handler-deps-cfg))
-        rt (rt/init cfg [:arachne/id :test/rt])]
-    (let [rt (c/start rt)]
+        rt (atom (rt/init cfg [:arachne/id :test/rt]))]
+    (try
+      (swap! rt c/start)
       (is (= "testdep-interceptor" (slurp "http://localhost:8080/interceptor")))
       (is (= "testdep-handler" (slurp "http://localhost:8080/handler")))
-      (c/stop rt))))
+      (finally
+        (swap! rt c/stop)))))
 
 (defn handler-a
   [request]
@@ -157,10 +184,12 @@
 (deftest ^:integration wildcard-path-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(wildcard-path-cfg))
-        rt (rt/init cfg [:arachne/id :test/rt])]
-    (let [rt (c/start rt)]
+        rt (atom (rt/init cfg [:arachne/id :test/rt]))]
+    (try
+      (swap! rt c/start)
       (is (= "foo/bar" (slurp "http://localhost:8080/a/b/foo/bar")))
-      (c/stop rt))))
+      (finally
+        (swap! rt c/stop)))))
 
 (defn handler-url-for
   [request]
@@ -174,7 +203,9 @@
 (deftest ^:integration url-for-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
                                `(url-for-cfg))
-        rt (rt/init cfg [:arachne/id :test/rt])]
-    (let [rt (c/start rt)]
+        rt (atom (rt/init cfg [:arachne/id :test/rt]))]
+    (try
+      (swap! rt c/start)
       (is (= "/foo/bar/baz" (slurp "http://localhost:8080/foo/bar/baz")))
-      (c/stop rt))))
+      (finally
+        (swap! rt c/stop)))))
