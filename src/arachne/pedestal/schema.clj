@@ -13,9 +13,10 @@
       "A Pedestal Endpoint"
       :arachne.pedestal.specs/endpoint)
 
-    (o/type :arachne.pedestal/Interceptor [:arachne/Component]
-      "A Pedestal interceptor as part of an Arachne HTTP routing structure. The runtime value must satisfy io.pedestal.interceptor/IntoInterceptor"
-      :arachne.pedestal.specs/interceptor
+    (o/type :arachne.pedestal/Interceptor []
+      "A Pedestal interceptor as part of an Arachne HTTP routing structure."
+      (o/attr :arachne.pedestal.interceptor/component :one :arachne/Component
+        "The component satisfying Pedestal's IntoInterceptor protocol.")
       (o/attr :arachne.pedestal.interceptor/route :one :arachne.http/RouteSegment
         "The node in the routing tree to which attach the interceptor. The interceptor will be applied to all requests for this node and its descendants.")
       (o/attr :arachne.pedestal.interceptor/priority :one-or-none :long

@@ -19,14 +19,15 @@
        [?interceptor :arachne.pedestal.interceptor/route ?route]]]))
 
 (defn find-route-interceptors
-  "Find interceptors in the routing table for a server (but not to the server
+  "Find interceptor components in the routing table for a server (but not to the server
   itself)"
   [cfg server-eid]
-  (cfg/q cfg '[:find [?interceptor ...]
+  (cfg/q cfg '[:find [?component ...]
                :in $ ?server %
                :where
                [?segment :arachne.http.route-segment/parent ?server]
-               (interceptors ?segment ?interceptor)]
+               (interceptors ?segment ?interceptor)
+               [?interceptor :arachne.pedestal.interceptor/component ?component]]
     server-eid interceptor-rules))
 
 (defn- lowest-priority
@@ -57,8 +58,9 @@
            {:db/id router-eid
             :arachne.pedestal.interceptor/route server-eid
             :arachne.pedestal.interceptor/priority (dec (lowest-priority cfg server-eid))
-            :arachne.component/constructor :arachne.pedestal.routes/router-interceptor
-            :arachne.component/dependencies deps})]))))
+            :arachne.pedestal.interceptor/component
+            {:arachne.component/constructor :arachne.pedestal.routes/router-interceptor
+             :arachne.component/dependencies deps}})]))))
 
 (defn- add-standard-interceptors
   "Add the standard default interceptors.
@@ -71,19 +73,19 @@
       (cfg/update cfg
         [{:arachne.pedestal.interceptor/route server-eid
           :arachne.pedestal.interceptor/priority (- p 1)
-          :arachne.component/instance :io.pedestal.http/not-found}
+          :arachne.pedestal.interceptor/component {:arachne.component/instance :io.pedestal.http/not-found}}
          {:arachne.pedestal.interceptor/route server-eid
           :arachne.pedestal.interceptor/priority (- p 2)
-          :arachne.component/instance :io.pedestal.http/log-request}
+          :arachne.pedestal.interceptor/component {:arachne.component/instance :io.pedestal.http/log-request}}
          {:arachne.pedestal.interceptor/route server-eid
           :arachne.pedestal.interceptor/priority (- p 3)
-          :arachne.component/constructor :arachne.pedestal.server/content-type-interceptor}
+          :arachne.pedestal.interceptor/component {:arachne.component/constructor :arachne.pedestal.server/content-type-interceptor}}
          {:arachne.pedestal.interceptor/route server-eid
           :arachne.pedestal.interceptor/priority (- p 4)
-          :arachne.component/instance :io.pedestal.http.route/query-params}
+          :arachne.pedestal.interceptor/component {:arachne.component/instance :io.pedestal.http.route/query-params}}
          {:arachne.pedestal.interceptor/route server-eid
           :arachne.pedestal.interceptor/priority (- p 5)
-          :arachne.component/constructor :arachne.pedestal.server/method-param-interceptor}]))))
+          :arachne.pedestal.interceptor/component {:arachne.component/constructor :arachne.pedestal.server/method-param-interceptor}}]))))
 
 (defn add-server-interceptor-deps
   "Ensure that the server has a component dependency on all of its directly
@@ -91,10 +93,11 @@
   dependencies of that (not the server directly)."
   [cfg server-eid]
   (let [root-interceptors (cfg/q cfg
-                            '[:find [?i ...]
+                            '[:find [?c ...]
                               :in $ ?server
                               :where
-                              [?i :arachne.pedestal.interceptor/route ?server]]
+                              [?i :arachne.pedestal.interceptor/route ?server]
+                              [?i :arachne.pedestal.interceptor/component ?c]]
                             server-eid)]
     (cfg/with-provenance :module `add-server-interceptor-deps
       (cfg/update cfg

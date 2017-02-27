@@ -12,29 +12,27 @@
 (defdsl create-server
   "Define an Pedestal HTTP server entity with the given Arachne ID and port, in the current
   configuration. Return the tempid of the new server."
-  (s/cat :arachne-id ::core-dsl/arachne-id
-         :port integer?)
-  [arachne-id port]
+  (s/cat :port integer?)
+  [port]
   (let [server-tid (cfg/tempid)]
     (script/transact
       [{:db/id server-tid
-        :arachne/id arachne-id
         :arachne/instance-of {:db/ident :arachne.pedestal/Server}
         :arachne.component/constructor :arachne.pedestal.server/constructor
         :arachne.http.server/port port}]
       server-tid)))
 
 (s/fdef server
-  :args (s/cat :arachne-id ::core-dsl/arachne-id
+  :args (s/cat
           :port integer?
           :body (s/* any?)))
 
 (defmacro server
   "Define a Pedestal HTTP server in the current configuration. Evaluates the body with the server
   bound as the context server. Returns the eid of the server component."
-  [arachne-id port & body]
-  (apply e/assert-args `server arachne-id port body)
-  `(let [server-eid# (create-server ~arachne-id ~port)]
+  [port & body]
+  (apply e/assert-args `server port body)
+  `(let [server-eid# (create-server ~port)]
      (binding [http-dsl/*context-server* server-eid#]
        ~@body)
      server-eid#))
@@ -42,7 +40,7 @@
 (s/def ::priority integer?)
 
 (defdsl interceptor
-  "Define a component to be a Pedestal interceptor attached to the specified path.
+  "Define a Pedestal interceptor attached to the specified path.
 
   Arguments are:
 
@@ -62,12 +60,13 @@
     :opts (util/keys** :opt-un [::priority]))
   [<path> component & opts]
   (let [path (http-dsl/with-context (or (:path &args) ""))
-        eid (core-dsl/resolved-ref (:component &args))
+        component (core-dsl/ref (:component &args))
         segment (http-dsl/ensure-path path)
         priority (-> &args :opts second :priority)
+        tid (cfg/tempid)
         entity (util/mkeep
-                 {:db/id eid
+                 {:db/id tid
+                  :arachne.pedestal.interceptor/component component
                   :arachne.pedestal.interceptor/route segment
                   :arachne.pedestal.interceptor/priority priority})]
-    (script/transact [entity])
-    eid))
+    (script/transact [entity] tid)))

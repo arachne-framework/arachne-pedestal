@@ -37,14 +37,15 @@
 
 (defn hello-world-server-cfg []
 
-  (a/runtime :test/rt [:test/server])
+  (a/id :test/rt (a/runtime [:test/server]))
 
-  (p/server :test/server 8080
-    (h/endpoint :get "/" (a/component `hello-world-handler) :name :hello-world)
-    (h/endpoint :get "/handler" (h/handler `handler))
-    (h/context "a"
-      (p/interceptor (a/component `a-interceptor))
-      (h/endpoint :get "b" (a/component `hello-world-handler) :name :hello-world-b))))
+  (a/id :test/server
+    (p/server 8080
+      (h/endpoint :get "/" (a/component `hello-world-handler) :name :hello-world)
+      (h/endpoint :get "/handler" (h/handler `handler))
+      (h/context "a"
+        (p/interceptor (a/component `a-interceptor))
+        (h/endpoint :get "b" (a/component `hello-world-handler) :name :hello-world-b)))))
 
 (deftest ^:integration hello-world-server
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
@@ -68,10 +69,10 @@
   (java.util.Date.))
 
 (defn endpoint-validity-cfg []
-  (a/runtime :test/rt [:test/server])
-  (a/component :test/invalid-handler `invalid-handler)
-  (p/server :test/server 8080
-    (h/endpoint :get "/" :test/invalid-handler)))
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/invalid-handler (a/component `invalid-handler))
+  (a/id :test/server (p/server 8080
+                       (h/endpoint :get "/" :test/invalid-handler))))
 
 (deftest ^:integration endpoint-validity
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
@@ -110,13 +111,14 @@
 
 (defn root-interceptors-cfg []
 
-  (a/runtime :test/rt [:test/server])
-  (a/component :test/hello-world-handler `hello-world-handler)
-  (a/component :test/root-interceptor `root-interceptor)
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/hello-world-handler (a/component `hello-world-handler))
+  (a/id :test/root-interceptor (a/component `root-interceptor))
 
-  (p/server :test/server 8080
-    (p/interceptor "/" :test/root-interceptor)
-    (h/endpoint :get "/" :test/hello-world-handler)))
+  (a/id :test/server
+    (p/server 8080
+      (p/interceptor "/" :test/root-interceptor)
+      (h/endpoint :get "/" :test/hello-world-handler))))
 
 (deftest ^:integration root-interceptors
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
@@ -149,17 +151,18 @@
   "testdep")
 
 (defn interceptor-and-handler-deps-cfg []
-  (a/runtime :test/rt [:test/server])
+  (a/id :test/rt (a/runtime [:test/server]))
 
-  (a/component :test/dep `dep-ctor)
+  (a/id :test/dep (a/component `dep-ctor))
 
-  (a/component :test/interceptor `interceptor-with-dep {:dep :test/dep})
+  (a/id :test/interceptor (a/component `interceptor-with-dep {:dep :test/dep}))
 
-  (h/handler :test/handler `handler-with-dep {:dep :test/dep})
+  (a/id :test/handler (h/handler `handler-with-dep {:dep :test/dep}))
 
-  (p/server :test/server 8080
-    (h/endpoint :get "/interceptor" :test/interceptor)
-    (h/endpoint :get "/handler" :test/handler)))
+  (a/id :test/server
+    (p/server 8080
+      (h/endpoint :get "/interceptor" :test/interceptor)
+      (h/endpoint :get "/handler" :test/handler))))
 
 (deftest ^:integration interceptor-and-handler-deps
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
@@ -177,9 +180,10 @@
   (ring-resp/response (:wild (:path-params request))))
 
 (defn wildcard-path-cfg []
-  (a/runtime :test/rt [:test/server])
-  (p/server :test/server 8080
-    (h/endpoint :get "/a/b/*wild" (h/handler `handler-a))))
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/server
+    (p/server 8080
+      (h/endpoint :get "/a/b/*wild" (h/handler `handler-a)))))
 
 (deftest ^:integration wildcard-path-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
@@ -196,9 +200,9 @@
   (ring-resp/response (r/url-for ::handler-url-for)))
 
 (defn url-for-cfg []
-  (a/runtime :test/rt [:test/server])
-  (p/server :test/server 8080
-            (h/endpoint :get "/foo/:a/baz" (h/handler `handler-url-for))))
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/server (p/server 8080
+                       (h/endpoint :get "/foo/:a/baz" (h/handler `handler-url-for)))))
 
 (deftest ^:integration url-for-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]

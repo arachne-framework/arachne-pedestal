@@ -11,43 +11,46 @@
 
 (defn basic-interceptors-cfg []
 
-  (a/runtime :test/rt [:test/server])
+  (a/id :test/rt (a/runtime [:test/server]))
 
-  (a/component :test/i1 'test/ctor)
-  (a/component :test/i2 'test/ctor)
-  (a/component :test/i3 'test/ctor)
+  (a/id :test/i1 (a/component 'test/ctor))
+  (a/id :test/i2 (a/component 'test/ctor))
+  (a/id :test/i3 (a/component 'test/ctor))
 
-  (p/server :test/server 8080
+  (a/id :test/server
+    (p/server 8080
 
-    (p/interceptor :test/i1)
+      (p/interceptor :test/i1)
 
-    (p/interceptor "a/b" :test/i2)
-    (p/interceptor "a/b" :test/i3)
+      (p/interceptor "a/b" :test/i2)
+      (p/interceptor "a/b" :test/i3)
 
-    (h/context "x/y"
-      (p/interceptor (a/component :test/i4 'test/ctor)))))
+      (h/context "x/y"
+        (p/interceptor (a/id :test/i4 (a/component 'test/ctor)))))))
 
 (deftest basic-interceptors
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
-              `(basic-interceptors-cfg))]
-
+              `(basic-interceptors-cfg) false)]
     (is (cfg/q cfg '[:find [?server]
                      :where
 
                      [?server :arachne.http.server/port 8080]
 
-                     [?i1 :arachne/id :test/i1]
+                     [?i1 :arachne.pedestal.interceptor/component ?c1]
+                     [?c1 :arachne/id :test/i1]
                      [?i1 :arachne.pedestal.interceptor/route ?server]
                      [?i1 :arachne.pedestal.interceptor/priority _]
 
                      [?b :arachne.http.route-segment/parent ?a]
                      [?a :arachne.http.route-segment/parent ?server]
 
-                     [?i2 :arachne/id :test/i2]
+                     [?c2 :arachne/id :test/i2]
+                     [?i2 :arachne.pedestal.interceptor/component ?c2]
                      [?i2 :arachne.pedestal.interceptor/route ?b]
                      [?i2 :arachne.pedestal.interceptor/priority ?i2-pri]
 
-                     [?i3 :arachne/id :test/i3]
+                     [?c3 :arachne/id :test/i3]
+                     [?i3 :arachne.pedestal.interceptor/component ?c3]
                      [?i3 :arachne.pedestal.interceptor/route ?b]
                      [?i3 :arachne.pedestal.interceptor/priority ?i3-pri]
 
@@ -56,33 +59,40 @@
                      [?y :arachne.http.route-segment/parent ?x]
                      [?x :arachne.http.route-segment/parent ?server]
 
-                     [?i4 :arachne/id :test/i4]
+                     [?c4 :arachne/id :test/i4]
+                     [?i4 :arachne.pedestal.interceptor/component ?c4]
                      [?i4 :arachne.pedestal.interceptor/route ?y]
                      [?i4 :arachne.pedestal.interceptor/priority _]]))))
 
 (defn interceptor-priority-cfg []
 
-  (a/runtime :test/rt [:test/server])
+  (a/id :test/rt (a/runtime [:test/server]))
 
-  (p/server :test/server 8080
+  (a/id :test/server
+    (p/server 8080
 
-    (p/interceptor (a/component :test/a1 'test/ctor))
-    (p/interceptor (a/component :test/a2 'test/ctor))
-    (p/interceptor (a/component :test/a3 'test/ctor) :priority 1)
-    (p/interceptor (a/component :test/a4 'test/ctor) :priority 2)
+      (p/interceptor (a/id :test/a1 (a/component 'test/ctor)))
+      (p/interceptor (a/id :test/a2 (a/component 'test/ctor)))
+      (p/interceptor (a/id :test/a3 (a/component 'test/ctor)) :priority 1)
+      (p/interceptor (a/id :test/a4 (a/component 'test/ctor)) :priority 2)
 
-    (h/context "foo"
+      (h/context "foo"
 
-      (p/interceptor (a/component :test/b1 'test/ctor))
-      (p/interceptor (a/component :test/b2 'test/ctor))
-      (p/interceptor (a/component :test/b3 'test/ctor) :priority 1)
-      (p/interceptor (a/component :test/b4 'test/ctor) :priority 2))))
+        (p/interceptor (a/id :test/b1 (a/component 'test/ctor)))
+        (p/interceptor (a/id :test/b2 (a/component 'test/ctor)))
+        (p/interceptor (a/id :test/b3 (a/component 'test/ctor)) :priority 1)
+        (p/interceptor (a/id :test/b4 (a/component 'test/ctor)) :priority 2)))))
 
 (deftest interceptor-priority
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
               `(interceptor-priority-cfg))
         pri (fn [aid]
-              (cfg/attr cfg [:arachne/id aid] :arachne.pedestal.interceptor/priority))]
+              (cfg/q cfg '[:find ?pri .
+                           :in $ ?aid
+                           :where
+                           [?c :arachne/id ?aid]
+                           [?i :arachne.pedestal.interceptor/component ?c]
+                           [?i :arachne.pedestal.interceptor/priority ?pri]] aid))]
 
     (is (= [:test/a2 :test/a1 :test/a3 :test/a4]
            (sort-by pri [:test/a1 :test/a2 :test/a3 :test/a4])))
@@ -103,9 +113,10 @@
 (defn handler-url-for [_])
 
 (defn url-for-cfg []
-  (a/runtime :test/rt [:test/server])
-  (p/server :test/server 8080
-            (h/endpoint :get "/foo/:a/baz" (h/handler `handler-url-for))))
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/server
+    (p/server 8080
+      (h/endpoint :get "/foo/:a/baz" (h/handler `handler-url-for)))))
 
 (deftest url-for-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]
@@ -119,15 +130,16 @@
 
 (defn multiple-method-config []
 
-  (a/runtime :test/rt [:test/server])
+  (a/id :test/rt (a/runtime [:test/server]))
 
-  (h/handler :test/handler `handler)
+  (a/id :test/handler (h/handler `handler))
 
-  (p/server :test/server 8080
+  (a/id :test/server
+    (p/server 8080
 
-    (h/endpoint #{:post :put} "/foo" :test/handler)
+      (h/endpoint #{:post :put} "/foo" :test/handler)
 
-    ))
+      )))
 
 (deftest multiple-method-test
   (let [cfg (core/build-config [:org.arachne-framework/arachne-pedestal]

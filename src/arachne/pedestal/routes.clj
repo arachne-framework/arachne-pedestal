@@ -20,11 +20,12 @@
   [cfg eid]
   (let [is (:arachne.pedestal.interceptor/_route
              (cfg/pull cfg '[{:arachne.pedestal.interceptor/_route
-                              [:db/id :arachne.pedestal.interceptor/priority]}]
+                              [:db/id :arachne.pedestal.interceptor/priority
+                               {:arachne.pedestal.interceptor/component [:db/id]}]}]
              eid))]
     (->> is
       (sort-by :arachne.pedestal.interceptor/priority >)
-      (map :db/id))))
+      (map #(:db/id (:arachne.pedestal.interceptor/component %))))))
 
 (defn- interceptor-eids
   "Calculate the eids of interceptors that should be active for a route given an
@@ -82,7 +83,11 @@
 (defn- server-router
   "Find server object associated with a given router"
   [cfg router-eid]
-  (cfg/attr cfg router-eid :arachne.pedestal.interceptor/route :db/id))
+  (cfg/q cfg '[:find ?server .
+               :in $ ?router
+               :where
+               [?interceptor :arachne.pedestal.interceptor/component ?router]
+               [?interceptor :arachne.pedestal.interceptor/route ?server]] router-eid))
 
 (defn routes
   "Given an Arachne config and the entity ID of a RouteSegment,
