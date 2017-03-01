@@ -59,8 +59,9 @@
             :arachne.pedestal.interceptor/route server-eid
             :arachne.pedestal.interceptor/priority (dec (lowest-priority cfg server-eid))
             :arachne.pedestal.interceptor/component
-            {:arachne.component/constructor :arachne.pedestal.routes/router-interceptor
-             :arachne.component/dependencies deps}})]))))
+            (util/mkeep
+              {:arachne.component/constructor :arachne.pedestal.routes/router-interceptor
+               :arachne.component/dependencies deps})})]))))
 
 (defn- add-standard-interceptors
   "Add the standard default interceptors.
