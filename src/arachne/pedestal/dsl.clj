@@ -31,7 +31,6 @@
   "Define a Pedestal HTTP server in the current configuration. Evaluates the body with the server
   bound as the context server. Returns the eid of the server component."
   [port & body]
-  (apply e/assert-args `server port body)
   `(let [server-eid# (create-server ~port)]
      (binding [http-dsl/*context-server* server-eid#]
        ~@body)
