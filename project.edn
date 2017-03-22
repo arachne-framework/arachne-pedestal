@@ -13,7 +13,7 @@
                       ring/ring-core]]
         [io.pedestal/pedestal.jetty "0.5.2"
          :exclusions [org.clojure/clojure]]
-        [org.arachne-framework/arachne-http "0.2.0-master-0068-6280749"
+        [org.arachne-framework/arachne-http "0.2.0-master-0069-f9c4c0a"
          :exclusions [commons-codec
                       org.clojure/tools.reader]]
         [org.clojure/test.check "0.9.0" :scope "test"
