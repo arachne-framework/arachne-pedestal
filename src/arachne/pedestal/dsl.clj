@@ -6,7 +6,7 @@
             [arachne.core.util :as util]
             [arachne.error :as e]
             [arachne.core.config.script :as script :refer [defdsl]]
-            [clojure.spec :as s]
+            [clojure.spec.alpha :as s]
             [clojure.string :as str]))
 
 (defdsl create-server

@@ -1,5 +1,5 @@
 (ns arachne.pedestal.specs
-  (:require [clojure.spec :as s]
+  (:require [clojure.spec.alpha :as s]
             [io.pedestal.interceptor :as i]
             [arachne.http :as http]))
 
