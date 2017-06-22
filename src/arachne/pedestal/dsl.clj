@@ -24,7 +24,7 @@
 
 (s/fdef server
   :args (s/cat
-          :port integer?
+          :port any?
           :body (s/* any?)))
 
 (defmacro server

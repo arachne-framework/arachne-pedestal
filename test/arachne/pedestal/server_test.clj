@@ -68,6 +68,25 @@
   []
   (java.util.Date.))
 
+(defn port-expression-cfg []
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/server (p/server (do 8080)
+                       (h/endpoint :get "/"
+                         (a/component `hello-world-handler) :name :hello-world))))
+
+(defn failing-port-type-cfg []
+  (a/id :test/rt (a/runtime [:test/server]))
+  (a/id :test/server (p/server "8080"
+                       (h/endpoint :get "/"
+                         (a/component `hello-world-handler) :name :hello-world))))
+
+(deftest port-expression-server
+  (is (core/build-config [:org.arachne-framework/arachne-pedestal]
+        `(port-expression-cfg)))
+  (is (thrown? arachne.ArachneException
+        (core/build-config [:org.arachne-framework/arachne-pedestal]
+          `(failing-port-type-cfg)))))
+
 (defn endpoint-validity-cfg []
   (a/id :test/rt (a/runtime [:test/server]))
   (a/id :test/invalid-handler (a/component `invalid-handler))
