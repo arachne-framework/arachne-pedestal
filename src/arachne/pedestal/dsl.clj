@@ -10,7 +10,7 @@
             [clojure.string :as str]))
 
 (defdsl create-server
-  "Define an Pedestal HTTP server entity with the given Arachne ID and port, in the current
+  "Define an Pedestal HTTP server entity with the given port, in the current
   configuration. Return the tempid of the new server."
   (s/cat :port integer?)
   [port]
